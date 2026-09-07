@@ -1,0 +1,6 @@
+@AcquaWS_HostAddress = http://localhost
+
+GET {{AcquaWS_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
