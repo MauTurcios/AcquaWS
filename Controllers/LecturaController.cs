@@ -8,15 +8,15 @@ using Microsoft.EntityFrameworkCore;
 using System.Data;
 
 namespace AcquaWS.Controllers
-{ 
+{
     [ApiController]
     [Route("api")]
-    public class LecturaController: ControllerBase
+    public class LecturaController : ControllerBase
     {
 
         private readonly ApplicationDbContext _context = null;
 
-        public LecturaController(ApplicationDbContext ctx) 
+        public LecturaController(ApplicationDbContext ctx)
         {
             _context = ctx;
         }
@@ -80,7 +80,7 @@ namespace AcquaWS.Controllers
 
         //EndPoint para obtener los clientes a prefacturar en el periodo
         [HttpGet("lectura_prefactura/{idLectura}")]
-        public async Task<ActionResult<IReadOnlyList<SRLecturaPrefacturaDTO>>>obtenerClientesPeriodo(int idLectura) 
+        public async Task<ActionResult<IReadOnlyList<SRLecturaPrefacturaDTO>>> obtenerClientesPeriodo(int idLectura)
         {
             var lectura_prefactura = await _context.Servicios_recurrentes_lectura_prefactura
                 .AsNoTracking()
@@ -102,15 +102,91 @@ namespace AcquaWS.Controllers
                     AppUsuarioPrefacturado = l.AppUsuarioPrefacturado == null ? "" : l.AppUsuarioPrefacturado
                 })
                 .ToListAsync();
-                if (lectura_prefactura == null)
-                {
-                    return NotFound();
-                }
-                return Ok(lectura_prefactura);
+            if (lectura_prefactura == null)
+            {
+                return NotFound();
             }
+            return Ok(lectura_prefactura);
+        }
 
+
+        //EndPoint para procesar lectura
         [HttpPost("procesarlectura")]
         public async Task<IActionResult> ProcesarLectura(LecturasDTO request)
+        {
+            return await procesarLecturaInterna(request, null);
+        }
+
+
+        //EndPoint para procesar lectura anterior
+        [HttpPost("procesar_lectura_anterior")]
+        public async Task<IActionResult> procesarLecturaAnterior(LecturaAnteriorDTO request)
+        {
+            try
+            {
+                var clienteCuenta = await _context.Servicios_recurrentes_clientes
+                    .FirstOrDefaultAsync(c =>
+                    c.Cuenta == request.Cuenta &&
+                    c.Borrado == false
+                    );
+                if (clienteCuenta == null) { return NotFound("La cuenta no existe."); }
+
+                var prefactura = await _context.Servicios_recurrentes_lectura_prefactura
+                    .FirstOrDefaultAsync(p =>
+                    p.IdLectura == request.IdLectura &&
+                    p.IdServicio_recuerrente_cliente == clienteCuenta.id
+                    );
+                if (prefactura == null) { return NotFound(""); }
+
+                clienteCuenta.Ultima_lectura = request.Lectura_anterior;
+                prefactura.Lectura_anterior = request.Lectura_anterior;
+
+                await _context.SaveChangesAsync();
+                return Ok(new { mensaje = "LECTURA ANTERIOR PROCESADA" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensaje = ex.Message,
+                    inner = ex.InnerException?.Message,
+                    tipo = ex.GetType().FullName
+                });
+            }
+        }
+
+
+        //EndPoint para procesar lectura completa (actual y anterior)
+        [HttpPost("procesarlectura_con_anterior")]
+        public async Task<IActionResult> ProcesarLecturaConAnterior(LecturaConAnteriorDTO request)
+        {
+            if (request.IdLectura <= 0)
+            {
+                return BadRequest("El periodo es invalido.");
+            }
+            if(request.Lectura_anterior <= 0)
+            {
+                return BadRequest("La lectura anterior debe ser mayor que cero.");
+            }
+            if (request.Lectura_actual < request.Lectura_anterior)
+            {
+                return BadRequest("La lectura actual no puede ser menor que la lectura anterior.");
+            }
+
+            var lecturaRequest = new LecturasDTO
+            {
+                IdLectura = request.IdLectura,
+                Cuenta = request.Cuenta,
+                Lectura_actual = request.Lectura_actual,
+                Empleado = request.Empleado
+            };
+
+            return await procesarLecturaInterna(lecturaRequest, request.Lectura_anterior);
+        }
+
+
+        //Metdodo que recibe los datos de la lectura, verifica datos y arma la respuesta
+        private async Task<IActionResult> procesarLecturaInterna(LecturasDTO request, decimal? lecturaAnterior)
         {
             try
             {
@@ -120,13 +196,19 @@ namespace AcquaWS.Controllers
                         c.Cuenta == request.Cuenta &&
                         c.Borrado == false);
 
-                if (cliente == null)
-                {
-                    return NotFound("La cuenta no existe.");
+                if (lecturaAnterior.HasValue) { 
+                    if (cliente.Ultima_lectura != 0)
+                    {
+                        return BadRequest("La cuenta ya tiene una lectura anterior");
+                    }
+                    cliente.Ultima_lectura = lecturaAnterior.Value;
                 }
-                if (cliente.Ultima_lectura == 0)
+                else
                 {
-                    return BadRequest("ULTIMA_LECTURA_REQUERIDA");
+                    if (cliente.Ultima_lectura == 0)
+                    {
+                        return BadRequest("ULTIMA_LECTURA_REQUERIDA");
+                    }
                 }
 
                 // Buscar registro del cliente en tabla Clientes
@@ -195,6 +277,10 @@ namespace AcquaWS.Controllers
                 if (prefactura.AppPrefacturado)
                 {
                     return BadRequest("La lectura ya fue procesada.");
+                }
+                if (lecturaAnterior.HasValue)
+                {
+                    prefactura.Lectura_anterior = lecturaAnterior.Value;
                 }
 
                 // Validar lectura
@@ -284,9 +370,9 @@ namespace AcquaWS.Controllers
                     E6_maximo_m3 = tarifa_cliente.Escala6_maximo_m3 == null ? 0 : tarifa_cliente.Escala6_maximo_m3,
                     E6_valor_m3 = tarifa_cliente.Escala6_valor_m3 == null ? 0 : tarifa_cliente.Escala6_valor_m3,
 
-                    E7_minimo_m3 = tarifa_cliente.Escala7_minimo_m3 == null ? 0 : tarifa_cliente.Escala6_minimo_m3,
-                    E7_maximo_m3 = tarifa_cliente.Escala7_maximo_m3 == null ? 0 : tarifa_cliente.Escala6_maximo_m3,
-                    E7_valor_m3 = tarifa_cliente.Escala7_valor_m3 == null ? 0 : tarifa_cliente.Escala6_valor_m3,
+                    E7_minimo_m3 = tarifa_cliente.Escala7_minimo_m3 == null ? 0 : tarifa_cliente.Escala7_minimo_m3,
+                    E7_maximo_m3 = tarifa_cliente.Escala7_maximo_m3 == null ? 0 : tarifa_cliente.Escala7_maximo_m3,
+                    E7_valor_m3 = tarifa_cliente.Escala7_valor_m3 == null ? 0 : tarifa_cliente.Escala7_valor_m3,
 
                     E8_minimo_m3 = tarifa_cliente.Escala8_minimo_m3 == null ? 0 : tarifa_cliente.Escala8_minimo_m3,
                     E8_maximo_m3 = tarifa_cliente.Escala8_maximo_m3 == null ? 0 : tarifa_cliente.Escala8_maximo_m3,
@@ -311,46 +397,9 @@ namespace AcquaWS.Controllers
                     tipo = ex.GetType().FullName
                 });
             }
+
         }
-
-        //EndPoint para procesar lectura anterior
-        [HttpPost("procesar_lectura_anterior")]
-        public async Task<IActionResult> procesarLecturaAnterior(LecturaAnteriorDTO request)
-        {
-            try
-            {
-                var clienteCuenta = await _context.Servicios_recurrentes_clientes
-                    .FirstOrDefaultAsync(c =>
-                    c.Cuenta == request.Cuenta &&
-                    c.Borrado == false
-                    );
-                if (clienteCuenta == null) { return NotFound("La cuenta no existe."); }
-
-                var prefactura = await _context.Servicios_recurrentes_lectura_prefactura
-                    .FirstOrDefaultAsync(p =>
-                    p.IdLectura == request.IdLectura &&
-                    p.IdServicio_recuerrente_cliente == clienteCuenta.id
-                    );
-                if (prefactura == null) { return NotFound(""); }
-
-                clienteCuenta.Ultima_lectura = request.Lectura_anterior;
-                prefactura.Lectura_anterior = request.Lectura_anterior;
-
-                await _context.SaveChangesAsync();
-                return Ok(new { mensaje= "LECTURA ANTERIOR PROCESADA" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    mensaje = ex.Message,
-                    inner = ex.InnerException?.Message,
-                    tipo = ex.GetType().FullName
-                });
-            }
-        }
-
-
+    
     }
 }
 
