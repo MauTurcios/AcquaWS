@@ -195,7 +195,10 @@ namespace AcquaWS.Controllers
                     .FirstOrDefaultAsync(c =>
                         c.Cuenta == request.Cuenta &&
                         c.Borrado == false);
-
+                if (cliente == null)
+                {
+                    return NotFound("La cuenta no existe.");
+                }
                 if (lecturaAnterior.HasValue) { 
                     if (cliente.Ultima_lectura != 0)
                     {
