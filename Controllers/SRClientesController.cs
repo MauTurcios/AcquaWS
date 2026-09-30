@@ -33,6 +33,7 @@ namespace AcquaWS.Controllers
         [HttpGet("clientessr")]
         public async Task<ActionResult<IReadOnlyList<SRClientesDTO>>> ObtenerSRClientes()
         {
+
             var srCliente = await _context.Servicios_recurrentes_clientes
                 .AsNoTracking()
                 .Where(c => c.Borrado != true)

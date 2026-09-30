@@ -18,7 +18,6 @@ namespace AcquaWS
         public DbSet<ConfigModel> Config { get; set; }
         public DbSet<UpdateApp> updateVersionApp { get; set; }
         public DbSet<ConsumoResponse> ConsumoResponse { get; set; }
-        public DbSet<RutaModel> Rutas { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ConsumoResponse>().HasNoKey();
@@ -28,5 +27,6 @@ namespace AcquaWS
         public DbSet<SRClientesSectoresZonasModel> Servicios_recurrentes_clientes_sectores_zonas { get; set; }
         public DbSet<SRLecturaPrefacturaModel> Servicios_recurrentes_lectura_prefactura {  get; set; }
         public DbSet<SRClientesColbar> Servicios_recurrentes_clientes_colbarr { get; set; }
+        public DbSet<SRClientesServicios> Servicios_recurrentes_clientes_servicios { get; set; }
     }
 }

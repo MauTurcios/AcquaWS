@@ -15,7 +15,7 @@
         public string? Tipo_factura { get; set; }
         public decimal Ult_lectura { get; set; }
         public string? Ult_factura_prefacturada { get; set; }
-        public int IdTarifa { get; set; }
+        public int? IdTarifa { get; set; } = 0; 
         public string CodCliente { get; set; }
     }
 }
