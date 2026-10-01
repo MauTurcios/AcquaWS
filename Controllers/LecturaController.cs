@@ -226,15 +226,28 @@ namespace AcquaWS.Controllers
                     return NotFound("El cliente no existe");
                 }
 
-                //Buscar tarifa del cliente
+                //Buscar la tarifa del cliente
+                var servicios_cliente = await _context.Servicios_recurrentes_clientes_servicios
+                    .FirstOrDefaultAsync(
+                    t =>
+                    t.Id_Servicios_recurrentes_clientes == cliente.id
+                    && t.Borrado == false
+                    && t.IdTarifa != null
+                    );
+                if (servicios_cliente == null)
+                {
+                    return NotFound("No se encontró la tarifa del cliente");
+                }
+
+                //Buscar datos del pliego tarifario de la tarifa del cliente
                 var tarifa_cliente = await _context.Servicios_recurrentes_tarifas
                     .FirstOrDefaultAsync(
                     t =>
-                    t.Id == cliente.IdTarifa
+                    t.Id == servicios_cliente.IdTarifa
                     );
                 if (tarifa_cliente == null)
                 {
-                    return NotFound("No se encontró la tarifa del cliente");
+                    return NotFound("No se encontró el pliego tarifario");
                 }
 
                 // Buscar colonia/barrio del cliente
@@ -291,8 +304,6 @@ namespace AcquaWS.Controllers
                 {
                     return BadRequest("La lectura actual no puede ser menor que la lectura anterior.");
                 }
-
-                //
 
                 // Actualizar
                 prefactura.Lectura_actual = request.Lectura_actual;

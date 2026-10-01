@@ -35,18 +35,5 @@ namespace AcquaWS.Controllers
                 .ToListAsync();
             return Ok(cliente);
         }
-        [HttpGet("rutas")]
-        public async Task<ActionResult<IReadOnlyList<ClientesDTO>>> obtenerRutas()
-        {
-            var cliente = await _context.Rutas
-                .AsNoTracking()
-                .Select(r => new RutaDTO
-                {
-                    id = r.id,
-                    Ruta = r.Ruta.Trim()
-                })
-                .ToListAsync();
-            return Ok(cliente);
-        }
     }
 }

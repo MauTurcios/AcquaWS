@@ -9,6 +9,6 @@
         public int? IdTarifa { get; set; }
         public string Recurrencia { get; set; } = "";
         public decimal Precio_personalizado { get; set; }
-        public decimal Precio_personalizado_iva { get; set; }
+        public decimal Precio_iva_personalizado { get; set; }
     }
 }

@@ -48,14 +48,26 @@ namespace AcquaWS.Controllers
                         Ultima_factura_cancelada = c.Ultima_factura_cancelada == null ? "" : c.Ultima_factura_cancelada,
                         Status = c.Status,
                         Cuenta = c.Cuenta,
-                        IdCatalogo = c.IdCatalogo,
+
+                        IdCatalogo = _context.Servicios_recurrentes_clientes_servicios
+                        .Where(s => s.Id_Servicios_recurrentes_clientes == c.id
+                        && s.Borrado == false && s.IdTarifa != null)
+                        .Select(s => s.IdCatalogo)
+                        .FirstOrDefault(),
+
                         Balance = c.Balance,
                         IdSector = c.IdSector,
                         Tipo_factura = c.Tipo_factura == null ? "" : c.Tipo_factura,
                         Ult_lectura = c.Ultima_lectura,
                         Ult_factura_prefacturada = c.Ultima_factura_prefacturada == null ? "" : c.Ultima_factura_prefacturada ,
-                        IdTarifa = c.IdTarifa,
-                        CodCliente = c.CodCliente,
+
+                        IdTarifa = _context.Servicios_recurrentes_clientes_servicios
+                        .Where(s => s.Id_Servicios_recurrentes_clientes == c.id
+                        && s.Borrado == false && s.IdTarifa != null)
+                        .Select(s => s.IdTarifa)
+                        .FirstOrDefault(),
+
+                        CodCliente = c.CodCliente == null ? "" : c.CodCliente.Trim()
                     })
                 .ToListAsync();
                 return Ok(srCliente);
